@@ -1,10 +1,8 @@
-# coding: utf-8
 import json
-
 import requests
 
 
-class DingTalk(object):
+class DingTalk:
     """
     send message to dingding webhook robot
     """
@@ -15,9 +13,10 @@ class DingTalk(object):
         """
         self.access_token = self.__parse_token(access_token)
         self.__headers = {"Content-Type": "application/json; charset=utf-8"}
-        self.dingtalk_webhook = 'https://oapi.dingtalk.com/robot/send?access_token=%s' % self.access_token
+        self.dingtalk_webhook = 'https://oapi.dingtalk.com/robot/send?access_token={}'.format(self.access_token)
 
-    def __parse_token(self, access_token):
+    @staticmethod
+    def __parse_token(access_token):
         """
         parse access token, access token must be 64 characters
         :param access_token: dingtalk webhook access_token
@@ -39,7 +38,26 @@ class DingTalk(object):
         except Exception:
             raise
 
-    def send_text(self, text, at_mobiles=[], at_all=False):
+    @staticmethod
+    def check_mobiles(mobiles):
+        """
+        check mobiles type
+        :param mobiles: mobiles
+        :return: True or False
+        """
+
+        if mobiles is None:
+            mobiles = []
+        elif isinstance(mobiles, str):
+            mobiles = [mobiles]
+        elif isinstance(mobiles, (list, tuple)):
+            mobiles = list(mobiles)
+        else:
+            raise TypeError('{} must be str, list, tuple, and must be invalid phone number'.format(mobiles))
+
+        return mobiles
+
+    def send_text(self, text, at_mobiles=None, at_all=False):
         """
         发送文本消息
         :param text: 发送的文本消息的内容
@@ -47,6 +65,8 @@ class DingTalk(object):
         :param at_all: 是否@所有人
         :return:
         """
+
+        at_mobiles = self.check_mobiles(at_mobiles)
 
         data = {
             "msgtype": "text",
@@ -66,8 +86,8 @@ class DingTalk(object):
         发送link消息
         :param title: 消息标题
         :param text: 消息的文本内容
-        :param message_url: 点击消息跳转到的URL
-        :param picture_url: 引用的图片的URL
+        :param message_url: 点击消息跳转到urlL
+        :param picture_url: 引用的图片的url
         :return:
         """
 
@@ -83,7 +103,7 @@ class DingTalk(object):
 
         return self.__do_request(data)
 
-    def send_markdown(self, title, text, at_mobiles=[], at_all=False):
+    def send_markdown(self, title, text, at_mobiles=None, at_all=False):
         """
         发送markdown消息
         :param title: 首屏会话展示的标题内容
@@ -92,6 +112,8 @@ class DingTalk(object):
         :param at_all: 是否@所有人
         :return:
         """
+
+        at_mobiles = self.check_mobiles(at_mobiles)
 
         data = {
             "msgtype": "markdown",
@@ -118,6 +140,7 @@ class DingTalk(object):
         :param button_orientation: 按钮方向。0按钮竖直排列, 1按钮水平排列
         :return:
         """
+
         data = {
             "msgtype": "actionCard",
             "actionCard": {
@@ -139,25 +162,22 @@ class DingTalk(object):
         :param text: markdown格式的文本内容
         :param hide_avatar: 0 显示发送消息者头像, 1 隐藏发送消息者头像
         :param button_orientation: 0 按钮竖直排列, 1 按钮水平排列
-        :param buttons: list。每个列表的元素都是一个dict，单个按钮的跳转，需要传递title和actionURL字段。
+        :param buttons: list。每个列表的元素都是一个dict，单个按钮的跳转，需要传递title和actionUurl字段。
         :return:
         """
 
-        if not isinstance(buttons, list):
-            raise TypeError('buttons must be a list')
+        if not isinstance(buttons, (list, tuple)):
+            raise TypeError('{} must be a list, tuple'.format(buttons))
 
         if len(buttons) == 0:
-            raise ValueError('buttons can not empty')
+            raise ValueError('{} can not empty'.format(buttons))
 
-        for d in buttons:
-            if not isinstance(d, dict):
-                raise TypeError('element {} must be dict'.format(d))
+        for button in buttons:
+            if not isinstance(button, dict):
+                raise TypeError('element {} must be dict'.format(button))
             else:
-                if 'title' not in d:
-                    raise ValueError('title field not in {}'.format(d))
-
-                if 'actionURL' not in d:
-                    raise ValueError('messageURL field not in {}'.format(d))
+                if 'title' not in button or 'actionURL' not in button:
+                    raise KeyError('key title or actionURL not in {}'.format(button))
 
         data = {
             "msgtype": "actionCard",
@@ -175,28 +195,28 @@ class DingTalk(object):
     def send_feed_card(self, links):
         """
         发送feed card消息
-        :param links: 列表。列表中的每个元素为dict，每个dict需要包含title、messageURL以及picURL字段。
+        :param links: list or tuple。列表中的每个元素为dict，每个dict需要包含title、messageURL以及picURL字段。
         :return:
         """
 
-        if not isinstance(links, list):
-            raise TypeError('links must be a list')
+        if not isinstance(links, (list, tuple)):
+            raise TypeError('{} must be a list, tuple'.format(links))
 
         if len(links) == 0:
-            raise ValueError('links can not empty')
+            raise ValueError('{} can not empty'.format(links))
 
-        for d in links:
-            if not isinstance(d, dict):
-                raise TypeError('element {} must be dict'.format(d))
+        for link in links:
+            if not isinstance(link, dict):
+                raise TypeError('element {} must be dict'.format(link))
             else:
-                if 'title' not in d:
-                    raise ValueError('title field not in {}'.format(d))
+                if 'title' not in link:
+                    raise KeyError('title field not in {}'.format(link))
 
-                if 'messageURL' not in d:
-                    raise ValueError('messageURL field not in {}'.format(d))
+                if 'messageURL' not in link:
+                    raise KeyError('messageURL field not in {}'.format(link))
 
-                if 'picURL' not in d:
-                    raise ValueError('picURL field not in {}'.format(d))
+                if 'picURL' not in link:
+                    raise KeyError('picURL field not in {}'.format(link))
 
         data = {
             "msgtype": "feedCard",
